@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: listenbrainz_raw
+    description: Raw ListenBrainz source data from BigQuery / Google Cloud Marketplace
+    database: listenbrainz_GCP
+    schema: listenbrainz
+
+    tables:
+      - name: listens
+        description: Raw ListenBrainz listening events

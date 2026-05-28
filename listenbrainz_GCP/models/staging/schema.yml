@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: stg_listenbrainz_listens
+    description: Cleaned staging table for ListenBrainz listening events
+
+    columns:
+      - name: listen_id
+        description: Unique listening event ID
+        tests:
+          - not_null
+          - unique
+
+      - name: user_name
+        description: Listener username
+        tests:
+          - not_null
+
+      - name: listened_at
+        description: Timestamp of the listening event
+        tests:
+          - not_null
+
+      - name: track_name
+        description: Name of the listened track
+        tests:
+          - not_null
+
+      - name: artist_name
+        description: Name of the artist
+        tests:
+          - not_null

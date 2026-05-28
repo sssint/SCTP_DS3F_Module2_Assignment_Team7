@@ -1,0 +1,143 @@
+version: 2
+
+models:
+  - name: dim_user
+    description: Dimension table containing unique ListenBrainz users
+    columns:
+      - name: user_id
+        description: Surrogate key for user
+        tests:
+          - not_null
+          - unique
+
+      - name: user_name
+        description: ListenBrainz username
+        tests:
+          - not_null
+
+  - name: dim_artist
+    description: Dimension table containing unique artists
+    columns:
+      - name: artist_id
+        description: Surrogate key for artist
+        tests:
+          - not_null
+          - unique
+
+      - name: artist_name
+        description: Artist name
+        tests:
+          - not_null
+
+  - name: dim_album
+    description: Dimension table containing unique albums
+    columns:
+      - name: album_id
+        description: Surrogate key for album
+        tests:
+          - not_null
+          - unique
+
+      - name: album_name
+        description: Album name
+
+  - name: dim_track
+    description: Dimension table containing unique tracks
+    columns:
+      - name: track_id
+        description: Surrogate key for track
+        tests:
+          - not_null
+          - unique
+
+      - name: track_name
+        description: Track name
+        tests:
+          - not_null
+
+  - name: dim_date
+    description: Date dimension for listening analysis
+    columns:
+      - name: date_id
+        description: Date key in YYYYMMDD format
+        tests:
+          - not_null
+          - unique
+
+      - name: full_date
+        description: Actual calendar date
+        tests:
+          - not_null
+
+  - name: dim_time
+    description: Time dimension for listening analysis
+    columns:
+      - name: time_id
+        description: Time key in HHMM format
+        tests:
+          - not_null
+          - unique
+
+      - name: hour
+        description: Hour of day
+        tests:
+          - not_null
+
+  - name: fact_listening_events
+    description: Fact table containing one row per music listening event
+    columns:
+      - name: listen_id
+        description: Unique listening event ID
+        tests:
+          - not_null
+          - unique
+
+      - name: user_id
+        description: Foreign key to dim_user
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_user')
+              field: user_id
+
+      - name: track_id
+        description: Foreign key to dim_track
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_track')
+              field: track_id
+
+      - name: artist_id
+        description: Foreign key to dim_artist
+        tests:
+          - relationships:
+              to: ref('dim_artist')
+              field: artist_id
+
+      - name: album_id
+        description: Foreign key to dim_album
+        tests:
+          - relationships:
+              to: ref('dim_album')
+              field: album_id
+
+      - name: date_id
+        description: Foreign key to dim_date
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_id
+
+      - name: time_id
+        description: Foreign key to dim_time
+        tests:
+          - relationships:
+              to: ref('dim_time')
+              field: time_id
+
+      - name: listen_count
+        description: Count of listening event, usually 1
+        tests:
+          - not_null

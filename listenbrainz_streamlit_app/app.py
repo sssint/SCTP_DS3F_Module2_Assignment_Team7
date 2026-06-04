@@ -103,15 +103,15 @@ LIMIT 10
 
 query_top_releases = f"""
 SELECT
-    al.album_name AS release_name,
+    al.release_name,
     al.artist_name,
     COUNT(*) AS total_listens
 FROM `{PROJECT_ID}.{DATASET}.fact_listening_events` f
 LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_album` al
     ON f.album_id = al.album_id
-WHERE al.album_name IS NOT NULL
+WHERE al.release_name IS NOT NULL
 GROUP BY
-    release_name,
+    al.release_name,
     al.artist_name
 ORDER BY total_listens DESC
 LIMIT 10

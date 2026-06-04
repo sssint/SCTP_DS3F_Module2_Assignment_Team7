@@ -7,12 +7,13 @@ gcloud services enable cloudbuild.googleapis.com
 gcloud services enable artifactregistry.googleapis.com
 gcloud services enable bigquery.googleapis.com
 
-git clone https://github.com/GoogleCloudPlatform/generative-ai.git
+git clone https://github.com/sssint/SCTP_DS3F_Module2_Assignment_Team7.git
 export GOOGLE_CLOUD_PROJECT='my-project-sssint1'  # Change this
 export GOOGLE_CLOUD_REGION='us-central1'
 export SERVICE_NAME='listenbrainz-streamlit-app'
 
-cd generative-ai/gemini/sample-apps/gemini-streamlit-cloudrun/
+cd SCTP_DS3F_Module2_Assignment_Team7/
+cd listenbrainz_streamlit_app/
 
 gcloud run deploy "$SERVICE_NAME" \
   --port=8080 \

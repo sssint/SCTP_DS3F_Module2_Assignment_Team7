@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: listenbrainz_raw
+    description: Raw ListenBrainz data copied into my GCP project
+    database: my-project-sssint1
+    schema: listenbrainz_gcp
+
+    tables:
+      - name: listen
+        description: Raw ListenBrainz listening events

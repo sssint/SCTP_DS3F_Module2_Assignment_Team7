@@ -38,7 +38,7 @@ models:
           - not_null
           - unique
 
-      - name: album_name
+      - name: release_name
         description: Album name
 
   - name: dim_track

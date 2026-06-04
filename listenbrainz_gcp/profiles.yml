@@ -1,0 +1,13 @@
+listenbrainz_gcp:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: my-project-sssint1
+      dataset: listenbrainz_gcp
+      location: US
+      keyfile: /home/sansa/my-project-sssint1-7e02e9078e06.json
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive

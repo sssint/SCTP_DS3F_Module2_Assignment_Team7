@@ -11,5 +11,5 @@ SELECT DISTINCT
         WHEN FORMAT_DATE('%A', listen_date) IN ('Saturday', 'Sunday') THEN TRUE
         ELSE FALSE
     END AS is_weekend
-FROM {{ ref('stg_listenbrainz_listens') }}
+FROM {{ ref('stg_listenbrainz_listen') }}
 WHERE listen_date IS NOT NULL

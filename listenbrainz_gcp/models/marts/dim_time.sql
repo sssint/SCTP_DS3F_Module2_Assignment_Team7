@@ -8,5 +8,5 @@ SELECT DISTINCT
         WHEN listen_hour BETWEEN 17 AND 20 THEN 'Evening'
         ELSE 'Night'
     END AS time_period
-FROM {{ ref('stg_listenbrainz_listens') }}
+FROM {{ ref('stg_listenbrainz_listen') }}
 WHERE listen_hour IS NOT NULL

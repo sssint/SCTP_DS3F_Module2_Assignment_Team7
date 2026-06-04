@@ -1,7 +1,7 @@
-WITH listens AS (
+WITH listen AS (
 
     SELECT *
-    FROM {{ ref('stg_listenbrainz_listens') }}
+    FROM {{ ref('stg_listenbrainz_listen') }}
 
 ),
 
@@ -48,7 +48,7 @@ SELECT
 
     1 AS listen_count
 
-FROM listens l
+FROM listen l
 
 LEFT JOIN users u
     ON l.user_name = u.user_name
@@ -61,5 +61,5 @@ LEFT JOIN artists ar
     ON l.artist_name = ar.artist_name
 
 LEFT JOIN albums al
-    ON l.album_name = al.album_name
+    ON l.release_name = al.release_name
     AND l.artist_name = al.artist_name

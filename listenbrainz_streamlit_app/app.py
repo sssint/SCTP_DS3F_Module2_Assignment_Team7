@@ -4,11 +4,15 @@ Streamlit + BigQuery + dbt Star Schema + Cloud Run
 
 Main features:
 - Executive summary dashboard
-- Top artists, songs, users, and releases
+- Top artists, songs, users, and known releases
 - Listening pattern by time of day
 - Monthly trend for latest 24 months
 - Clean UI with sidebar navigation
 - BigQuery error handling
+
+Important:
+- dim_album contains: album_id, release_name, artist_name
+- release_name is optional metadata, so blank release_name rows are excluded from release charts
 """
 
 import pandas as pd
@@ -50,6 +54,7 @@ st.markdown(
         border-radius: 18px;
         color: white;
         margin-bottom: 1.5rem;
+        box-shadow: 0 10px 28px rgba(30, 64, 175, 0.22);
     }
 
     .hero-title {
@@ -61,14 +66,7 @@ st.markdown(
     .hero-subtitle {
         font-size: 1rem;
         color: #DBEAFE;
-    }
-
-    .metric-card {
-        background-color: white;
-        padding: 1.2rem;
-        border-radius: 16px;
-        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
-        border: 1px solid #E5E7EB;
+        line-height: 1.55;
     }
 
     .section-card {
@@ -78,6 +76,36 @@ st.markdown(
         box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
         border: 1px solid #E5E7EB;
         margin-bottom: 1rem;
+    }
+
+    .note-card {
+        background-color: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        padding: 1rem;
+        border-radius: 14px;
+        color: #1E3A8A;
+        margin-top: 0.8rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .success-card {
+        background-color: #ECFDF5;
+        border: 1px solid #A7F3D0;
+        padding: 1rem;
+        border-radius: 14px;
+        color: #065F46;
+        margin-top: 0.8rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .warning-card {
+        background-color: #FFFBEB;
+        border: 1px solid #FDE68A;
+        padding: 1rem;
+        border-radius: 14px;
+        color: #92400E;
+        margin-top: 0.8rem;
+        margin-bottom: 0.8rem;
     }
 
     .small-muted {
@@ -149,8 +177,16 @@ SELECT
     COUNT(DISTINCT user_id) AS total_users,
     COUNT(DISTINCT track_id) AS total_tracks,
     COUNT(DISTINCT artist_id) AS total_artists,
-    COUNT(DISTINCT album_id) AS total_releases
+    COUNT(DISTINCT CASE WHEN album_id IS NOT NULL THEN album_id END) AS total_known_releases
 FROM `{PROJECT_ID}.{DATASET}.fact_listening_events`
+"""
+
+query_release_metadata = f"""
+SELECT
+    COUNT(*) AS total_dim_album_rows,
+    COUNTIF(release_name IS NULL OR TRIM(release_name) = '') AS missing_release_rows,
+    COUNTIF(release_name IS NOT NULL AND TRIM(release_name) != '') AS known_release_rows
+FROM `{PROJECT_ID}.{DATASET}.dim_album`
 """
 
 query_top_artists = f"""
@@ -239,7 +275,8 @@ LIMIT 10
 
 # IMPORTANT:
 # dim_album has columns: album_id, release_name, artist_name
-# Use release_name, NOT album_name.
+# release_name is optional metadata.
+# Blank release names are excluded from the dashboard chart.
 query_top_releases = f"""
 SELECT
     al.release_name,
@@ -249,6 +286,7 @@ FROM `{PROJECT_ID}.{DATASET}.fact_listening_events` f
 LEFT JOIN `{PROJECT_ID}.{DATASET}.dim_album` al
     ON f.album_id = al.album_id
 WHERE al.release_name IS NOT NULL
+  AND TRIM(al.release_name) != ''
 GROUP BY
     al.release_name,
     al.artist_name
@@ -299,7 +337,7 @@ st.markdown(
         <div class="hero-title">ListenBrainz Music Analytics Dashboard</div>
         <div class="hero-subtitle">
             BigQuery star schema dashboard for music listening trends, popular artists,
-            top songs, active users, and trending releases.
+            top songs, active users, and known releases.
         </div>
     </div>
     """,
@@ -313,6 +351,7 @@ st.markdown(
 
 with st.spinner("Loading dashboard data from BigQuery..."):
     summary = safe_run_query("summary metrics", query_summary)
+    release_metadata = safe_run_query("release metadata completeness", query_release_metadata)
     top_artists = safe_run_query("top artists", query_top_artists)
     top_songs = safe_run_query("top songs", query_top_songs)
     time_of_day = safe_run_query("time of day", query_time_of_day)
@@ -375,7 +414,18 @@ if page == "Executive Overview":
         c2.metric("Users", f"{int(row['total_users']):,}")
         c3.metric("Tracks", f"{int(row['total_tracks']):,}")
         c4.metric("Artists", f"{int(row['total_artists']):,}")
-        c5.metric("Releases", f"{int(row['total_releases']):,}")
+        c5.metric("Known releases", f"{int(row['total_known_releases']):,}")
+
+    st.markdown(
+        """
+        <div class="note-card">
+            <b>Metadata note:</b> Release metadata is optional in ListenBrainz. 
+            Records with missing release_name are retained for user, artist, track, and time analysis, 
+            but excluded from the Top Releases chart.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown("### Key Insights")
 
@@ -399,7 +449,7 @@ if page == "Executive Overview":
 
     st.markdown("### Business Value")
     st.info(
-        "This dashboard helps stakeholders identify popular artists, songs, releases, "
+        "This dashboard helps stakeholders identify popular artists, songs, known releases, "
         "active listeners, and listening patterns over time. It demonstrates how the "
         "BigQuery star schema supports fast analytical reporting."
     )
@@ -472,7 +522,7 @@ elif page == "Listening Patterns":
 elif page == "Users & Releases":
     st.subheader("Users & Releases")
 
-    tab1, tab2 = st.tabs(["Top Users", "Trending Releases"])
+    tab1, tab2, tab3 = st.tabs(["Top Users", "Trending Known Releases", "Release Metadata"])
 
     with tab1:
         st.markdown("### Which users listen most often?")
@@ -483,12 +533,43 @@ elif page == "Users & Releases":
             st.info("No top users found.")
 
     with tab2:
-        st.markdown("### Which releases are trending?")
+        st.markdown("### Which known releases are trending?")
+        st.caption(
+            "Release metadata is optional in ListenBrainz. Rows with missing release_name "
+            "are excluded from this chart but still retained for track, artist, user, and time analysis."
+        )
         if not top_releases_plot.empty:
             st.bar_chart(top_releases_plot.set_index("release_label")["total_listens"])
             st.dataframe(top_releases, use_container_width=True, hide_index=True)
         else:
-            st.info("No top releases found.")
+            st.info("No known releases found.")
+
+    with tab3:
+        st.markdown("### Release metadata completeness")
+        if not release_metadata.empty:
+            st.dataframe(release_metadata, use_container_width=True, hide_index=True)
+            meta = release_metadata.iloc[0]
+            total = int(meta["total_dim_album_rows"])
+            missing = int(meta["missing_release_rows"])
+            known = int(meta["known_release_rows"])
+            pct_missing = (missing / total * 100) if total else 0
+
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Dim album rows", f"{total:,}")
+            c2.metric("Known release names", f"{known:,}")
+            c3.metric("Missing release names", f"{missing:,}", f"{pct_missing:.2f}%")
+
+            st.markdown(
+                """
+                <div class="note-card">
+                    Missing release_name is treated as metadata completeness, not a data quality failure.
+                    These records can still support artist, track, user, date, and time analysis.
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.info("No release metadata summary available.")
 
 
 # =========================================================

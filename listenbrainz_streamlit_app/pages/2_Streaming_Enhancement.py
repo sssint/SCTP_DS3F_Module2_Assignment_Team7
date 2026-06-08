@@ -6,6 +6,9 @@ Place this file inside your Streamlit app folder:
 listenbrainz_streamlit_app/
 └── pages/
     └── 2_Streaming_Enhancement.py
+
+This page explains the optional Kafka + Spark Streaming enhancement for the
+ListenBrainz music listening analytics project.
 """
 
 import streamlit as st
@@ -17,22 +20,94 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("⚡ Optional Enhancement: Kafka + Spark Streaming")
-st.write(
-    "This page explains how the ListenBrainz pipeline can be extended into a "
-    "near real-time streaming architecture for high-volume music listening events."
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: #F8FAFC;
+    }
+
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    .hero-card {
+        background: linear-gradient(135deg, #111827 0%, #312E81 45%, #1D4ED8 100%);
+        padding: 2rem;
+        border-radius: 18px;
+        color: white;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 10px 28px rgba(30, 64, 175, 0.22);
+    }
+
+    .hero-title {
+        font-size: 2.1rem;
+        font-weight: 800;
+        margin-bottom: 0.3rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+        color: #DBEAFE;
+        line-height: 1.55;
+    }
+
+    .note-card {
+        background-color: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        padding: 1rem;
+        border-radius: 14px;
+        color: #1E3A8A;
+        margin-top: 0.8rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .success-card {
+        background-color: #ECFDF5;
+        border: 1px solid #A7F3D0;
+        padding: 1rem;
+        border-radius: 14px;
+        color: #065F46;
+        margin-top: 0.8rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .warning-card {
+        background-color: #FFFBEB;
+        border: 1px solid #FDE68A;
+        padding: 1rem;
+        border-radius: 14px;
+        color: #92400E;
+        margin-top: 0.8rem;
+        margin-bottom: 0.8rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
-st.divider()
+st.markdown(
+    """
+    <div class="hero-card">
+        <div class="hero-title">⚡ Optional Enhancement: Kafka + Spark Streaming</div>
+        <div class="hero-subtitle">
+            Extend the ListenBrainz batch analytics pipeline into a near real-time streaming architecture
+            for high-volume music listening events.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.header("1. Why streaming enhancement is useful")
 
 st.write(
     """
 Music listening events can happen at any time of the day and may arrive in very high volume.
-For example, popular songs, viral artists, or new album releases can generate many listening
-events within a short period. A batch-only pipeline is useful for daily reporting, but a
-streaming pipeline allows the business to monitor trends almost immediately.
+Popular songs, viral artists, and new release campaigns can generate many listening events within
+a short period. A batch-only pipeline is useful for daily reporting, while a streaming pipeline
+allows the business to monitor trends almost immediately.
 """
 )
 
@@ -72,10 +147,9 @@ Alerts / Business Monitoring
 
 st.write(
     """
-In this optional enhancement, Kafka acts as the event broker and receives listening events
-as messages. Spark Structured Streaming consumes the Kafka messages, cleans the data,
-aggregates listening activity, and writes the results into BigQuery. Streamlit can then
-read from BigQuery to show near real-time dashboards.
+Kafka acts as the event broker and receives listening events as messages. Spark Structured
+Streaming consumes the Kafka messages, cleans the data, aggregates listening activity, and writes
+the results into BigQuery. Streamlit can then read from BigQuery to show near real-time dashboards.
 """
 )
 
@@ -101,7 +175,7 @@ components = [
     },
     {
         "Component": "dbt",
-        "Responsibility": "Maintains batch star schema models",
+        "Responsibility": "Maintains the batch star schema models",
         "Reason": "Provides clean dimensional models for historical reporting"
     },
     {
@@ -111,7 +185,7 @@ components = [
     }
 ]
 
-st.dataframe(components, use_container_width=True)
+st.dataframe(components, use_container_width=True, hide_index=True)
 
 st.divider()
 
@@ -137,10 +211,25 @@ metrics = [
     {
         "Metric": "Failed or invalid events",
         "Purpose": "Detect data quality or ingestion issues"
+    },
+    {
+        "Metric": "Known releases trending",
+        "Purpose": "Monitor release_name only when release metadata is available"
     }
 ]
 
-st.dataframe(metrics, use_container_width=True)
+st.dataframe(metrics, use_container_width=True, hide_index=True)
+
+st.markdown(
+    """
+    <div class="note-card">
+        <b>Metadata note:</b> release_name is optional in ListenBrainz. In a streaming design,
+        missing release_name should be monitored as metadata completeness, while valid events
+        should still be used for song, artist, user, and time analysis.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.divider()
 
@@ -167,7 +256,7 @@ st.header("6. Example Spark Structured Streaming Logic")
 st.code(
     """
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col, window, count
+from pyspark.sql.functions import from_json, col, window, count, trim
 from pyspark.sql.types import StructType, StructField, StringType, TimestampType
 
 spark = SparkSession.builder.appName("listenbrainz-streaming").getOrCreate()
@@ -194,6 +283,10 @@ parsed_stream = (
     .selectExpr("CAST(value AS STRING) AS json_value")
     .select(from_json(col("json_value"), schema).alias("data"))
     .select("data.*")
+    .filter(col("user_name").isNotNull())
+    .filter(col("track_name").isNotNull() & (trim(col("track_name")) != ""))
+    .filter(col("artist_name").isNotNull() & (trim(col("artist_name")) != ""))
+    .filter(col("recording_msid").isNotNull())
 )
 
 top_songs_stream = (
@@ -225,14 +318,6 @@ st.divider()
 
 st.header("7. Batch and Streaming Hybrid Design")
 
-st.write(
-    """
-The recommended production design is a hybrid architecture. The existing dbt batch pipeline
-continues to produce reliable historical star schema tables for reporting. The Kafka and Spark
-streaming pipeline provides near real-time metrics for recent listening activity.
-"""
-)
-
 hybrid = [
     {
         "Layer": "Batch pipeline",
@@ -251,29 +336,35 @@ hybrid = [
     }
 ]
 
-st.dataframe(hybrid, use_container_width=True)
+st.dataframe(hybrid, use_container_width=True, hide_index=True)
 
 st.divider()
 
 st.header("8. Benefits")
 
-st.success(
+st.markdown(
     """
-Adding Kafka and Spark Streaming improves the system by allowing the business to monitor
-music listening behaviour as it happens. This supports faster detection of trending songs,
-higher responsiveness to traffic spikes, and better operational visibility for a music
-streaming-style platform.
-"""
+    <div class="success-card">
+        Adding Kafka and Spark Streaming improves the system by allowing the business to monitor
+        music listening behaviour as it happens. This supports faster detection of trending songs,
+        higher responsiveness to traffic spikes, and better operational visibility for a music
+        streaming-style platform.
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 st.header("9. Limitations")
 
-st.warning(
+st.markdown(
     """
-This enhancement increases system complexity. Kafka and Spark require additional infrastructure,
-monitoring, checkpointing, and error handling. For the current assignment, this is recommended
-as an optional future enhancement rather than the main implementation.
-"""
+    <div class="warning-card">
+        This enhancement increases system complexity. Kafka and Spark require additional infrastructure,
+        monitoring, checkpointing, and error handling. For the current assignment, this is recommended
+        as an optional future enhancement rather than the main implementation.
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 st.divider()
@@ -284,11 +375,11 @@ st.markdown(
     """
 **Optional Enhancement:**  
 Kafka and Spark Streaming can be incorporated to support near real-time processing of music
-listening events. Since music listening can occur at any time and the event volume can become
-very large when popular songs are played repeatedly, a streaming architecture would allow the
-system to process and monitor events continuously. Kafka can be used as the message broker to
-ingest listening events, while Spark Structured Streaming can clean, aggregate, and write
-real-time metrics into BigQuery. This enhancement would support real-time dashboards showing
-top songs, top artists, listening events per minute, and trending releases.
+listening events. Since music listening can occur at any time and event volume can become very
+large when popular songs are played repeatedly, a streaming architecture would allow the system
+to process and monitor events continuously. Kafka can be used as the message broker to ingest
+listening events, while Spark Structured Streaming can clean, aggregate, and write real-time
+metrics into BigQuery. This enhancement would support real-time dashboards showing top songs,
+top artists, listening events per minute, and trending known releases.
 """
 )

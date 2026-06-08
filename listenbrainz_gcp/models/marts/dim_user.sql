@@ -1,6 +1,5 @@
-
 SELECT
-    {{ dbt_utils.generate_surrogate_key(['user_name']) }} AS user_id,
+    TO_HEX(MD5(user_name)) AS user_id,
     user_name
 FROM {{ ref('stg_listenbrainz_listen') }}
 WHERE user_name IS NOT NULL

@@ -1,0 +1,26 @@
+check_name,invalid_rows,status
+dim_user.user_id is not null,0,PASS
+dim_user.user_id is unique,0,PASS
+dim_track.track_id is not null,0,PASS
+dim_track.track_id is unique,0,PASS
+dim_artist.artist_id is not null,0,PASS
+dim_artist.artist_id is unique,0,PASS
+dim_album.album_id is not null,0,PASS
+dim_album.album_id is unique,0,PASS
+dim_date.date_id is not null,0,PASS
+dim_date.date_id is unique,0,PASS
+dim_time.time_id is not null,0,PASS
+dim_time.time_id is unique,0,PASS
+fact_listening_events.listen_id is not null,0,PASS
+fact_listening_events.listen_id is unique,0,PASS
+fact foreign keys are not null,0,PASS
+fact.user_id exists in dim_user,0,PASS
+fact.track_id exists in dim_track,0,PASS
+fact.artist_id exists in dim_artist,0,PASS
+fact.album_id exists in dim_album when not null,0,PASS
+fact.date_id exists in dim_date,0,PASS
+fact.time_id exists in dim_time,0,PASS
+listen_count equals 1,0,PASS
+listened_at is not in the future,0,PASS
+dim_track.track_name is not blank,0,PASS
+dim_artist.artist_name is not blank,0,PASS
